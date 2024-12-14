@@ -54,7 +54,7 @@ const Dictionary = () => {
   return (
     <Card className="w-full max-w-2xl mx-auto">
       <CardHeader>
-        <CardTitle>個人用辞書</CardTitle>
+        <CardTitle>メモ</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex items-center space-x-2">
