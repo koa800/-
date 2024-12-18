@@ -1,123 +1,115 @@
-import React, { useState, useEffect } from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import React, { useState } from 'react';
+import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Plus, Search, Edit2, Trash2 } from 'lucide-react';
+import { Plus, X } from 'lucide-react';
 
-const Dictionary = () => {
-  // ローカルストレージから初期データを読み込む
-  const [words, setWords] = useState(() => {
-    const saved = localStorage.getItem('dictionary');
-    return saved ? JSON.parse(saved) : [];
-  });
-  const [searchTerm, setSearchTerm] = useState('');
-  const [newWord, setNewWord] = useState({ term: '', definition: '' });
-  const [editMode, setEditMode] = useState(false);
-  const [editIndex, setEditIndex] = useState(null);
+const PriorityMatrix = () => {
+  const [items, setItems] = useState([]);
+  const [newItem, setNewItem] = useState('');
+  const [draggedItem, setDraggedItem] = useState(null);
 
-  // データが変更されたらローカルストレージに保存
-  useEffect(() => {
-    localStorage.setItem('dictionary', JSON.stringify(words));
-  }, [words]);
+  // 象限の定義（タイトルなし）
+  const quadrants = [
+    { id: 1, top: 0, left: '50%' },
+    { id: 2, top: 0, left: 0 },
+    { id: 3, top: '50%', left: '50%' },
+    { id: 4, top: '50%', left: 0 }
+  ];
 
-  const addWord = () => {
-    if (newWord.term && newWord.definition) {
-      if (editMode) {
-        const updatedWords = [...words];
-        updatedWords[editIndex] = newWord;
-        setWords(updatedWords);
-        setEditMode(false);
-        setEditIndex(null);
-      } else {
-        setWords([...words, newWord]);
-      }
-      setNewWord({ term: '', definition: '' });
+  const addItem = () => {
+    if (newItem.trim()) {
+      setItems([...items, {
+        id: Date.now(),
+        text: newItem,
+        quadrant: 4,
+        position: { x: 10, y: 10 }
+      }]);
+      setNewItem('');
     }
   };
 
-  const editWord = (index) => {
-    setNewWord(words[index]);
-    setEditMode(true);
-    setEditIndex(index);
+  const handleDragStart = (item) => {
+    setDraggedItem(item);
   };
 
-  const deleteWord = (index) => {
-    const updatedWords = words.filter((_, i) => i !== index);
-    setWords(updatedWords);
+  const handleDragOver = (e, quadrant) => {
+    e.preventDefault();
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    
+    if (draggedItem) {
+      const updatedItems = items.map(item => 
+        item.id === draggedItem.id 
+          ? { ...item, quadrant, position: { x, y } }
+          : item
+      );
+      setItems(updatedItems);
+    }
   };
 
-  const filteredWords = words.filter(word => 
-    word.term.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    word.definition.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const deleteItem = (itemId) => {
+    setItems(items.filter(item => item.id !== itemId));
+  };
 
   return (
-    <Card className="w-full max-w-2xl mx-auto">
-      <CardHeader>
-        <CardTitle>メモ</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex items-center space-x-2">
-          <Search className="w-4 h-4 text-gray-500" />
-          <Input
-            placeholder="単語を検索..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="flex-1"
-          />
-        </div>
+    <div className="w-full max-w-4xl mx-auto p-4">
+      <div className="mb-4 flex gap-2">
+        <Input
+          value={newItem}
+          onChange={(e) => setNewItem(e.target.value)}
+          placeholder="新しい項目を追加"
+          className="flex-1"
+        />
+        <Button onClick={addItem}>
+          <Plus className="w-4 h-4 mr-2" />
+          追加
+        </Button>
+      </div>
 
-        <div className="space-y-2">
-          <Input
-            placeholder="新しい単語"
-            value={newWord.term}
-            onChange={(e) => setNewWord({ ...newWord, term: e.target.value })}
-          />
-          <Input
-            placeholder="定義"
-            value={newWord.definition}
-            onChange={(e) => setNewWord({ ...newWord, definition: e.target.value })}
-          />
-          <Button 
-            onClick={addWord}
-            className="w-full"
+      <div className="relative w-full aspect-square border border-gray-200 rounded-lg">
+        {/* 軸のラベル */}
+        <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-sm font-medium">緊急度 高</div>
+        <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-sm font-medium">緊急度 低</div>
+        <div className="absolute -left-16 top-1/2 -translate-y-1/2 text-sm font-medium">重要度 低</div>
+        <div className="absolute -right-16 top-1/2 -translate-y-1/2 text-sm font-medium">重要度 高</div>
+
+        {/* 象限（タイトルなし） */}
+        {quadrants.map(quadrant => (
+          <div
+            key={quadrant.id}
+            className="absolute w-1/2 h-1/2 border border-gray-200 p-2"
+            style={{ top: quadrant.top, left: quadrant.left }}
+            onDragOver={(e) => handleDragOver(e, quadrant.id)}
           >
-            <Plus className="w-4 h-4 mr-2" />
-            {editMode ? '更新' : '追加'}
-          </Button>
-        </div>
-
-        <div className="space-y-2">
-          {filteredWords.map((word, index) => (
-            <Card key={index} className="p-4">
-              <div className="flex justify-between items-start">
-                <div>
-                  <h3 className="font-bold">{word.term}</h3>
-                  <p className="text-gray-600">{word.definition}</p>
-                </div>
-                <div className="flex space-x-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => editWord(index)}
+            {items
+              .filter(item => item.quadrant === quadrant.id)
+              .map(item => (
+                <div
+                  key={item.id}
+                  className="absolute inline-flex items-center gap-2 p-2 bg-white border rounded shadow-sm cursor-move"
+                  style={{ 
+                    left: `${item.position.x}px`,
+                    top: `${item.position.y}px`
+                  }}
+                  draggable
+                  onDragStart={() => handleDragStart(item)}
+                >
+                  <span>{item.text}</span>
+                  <button
+                    onClick={() => deleteItem(item.id)}
+                    className="text-gray-400 hover:text-gray-600"
                   >
-                    <Edit2 className="w-4 h-4" />
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => deleteWord(index)}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
+                    <X className="w-4 h-4" />
+                  </button>
                 </div>
-              </div>
-            </Card>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
+              ))}
+          </div>
+        ))}
+      </div>
+    </div>
   );
 };
 
-export default Dictionary;
+export default PriorityMatrix;
